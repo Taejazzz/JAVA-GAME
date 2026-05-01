@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Squid Game - Glass Bridge</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400;700&display=swap');
+
+        :root {
+            --pink: #ed1b76;
+            --green: #037a76;
+            --black: #000000;
+            --white: #ffffff;
+            --glass: rgba(255, 255, 255, 0.2);
+            --safe: #4ade80;
+            --danger: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--black);
+            color: var(--white);
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            line-height: 1;
+        }
+
+        .title .squid { color: var(--pink); text-shadow: 0 0 20px var(--pink); }
+        .title .game { color: #00d2ff; text-shadow: 0 0 20px #00d2ff; }
+
+        .btn-start {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            padding: 1rem 3rem;
+            background-color: var(--pink);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px var(--pink);
+        }
+
+        .btn-start:hover {
+            transform: scale(1.1);
+            background-color: #f7338a;
+        }
+
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 20px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .lives { display: flex; gap: 10px; }
+        .heart { width: 30px; height: 30px; transition: opacity 0.3s; }
+
+        .bridge-container {
+            position: relative;
+            background: linear-gradient(to bottom, #111, #222);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #333;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .side-platform {
+            width: 80px;
+            height: 180px;
+            background: #444;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+        }
+
+        .start-platform { background: var(--danger); }
+        .end-platform { background: var(--safe); }
+
+        .bridge-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 100px);
+            grid-template-rows: repeat(2, 80px);
+            gap: 15px;
+        }
+
+        .glass-block {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .glass-block:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .glass-block.correct { background: var(--safe) !important; }
+        .glass-block.cracked { background: none !important; border: none; }
+        .glass-block.cracked::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('crack.jpeg') center/cover no-repeat;
+        }
+
+        .character {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .quiz-modal {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 2px solid var(--pink);
+        }
+
+        .quiz-question { font-size: 1.5rem; margin-bottom: 20px; }
+        .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .opt-btn {
+            padding: 15px;
+            background: #333;
+            border: none;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .opt-btn:hover { background: #444; }
+
+        .game-over-modal {
+            background: #000;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            border: 5px solid var(--pink);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <div class="title">
+            <span class="squid">SQUID</span><br>
+            <span class="game">GAME</span>
+        </div>
+        <p style="color: #666; margin-bottom: 2rem;">GLASS BRIDGE CHALLENGE</p>
+        <button class="btn-start" onclick="startGame()">START GAME</button>
+    </div>
+
+    <div id="game-container">
+        <div class="stats-bar">
+            <div class="lives" id="lives-container"></div>
+            <div id="status-msg">MOVE TO THE NEXT BLOCK</div>
+        </div>
+
+        <div class="bridge-container">
+            <div class="side-platform start-platform">START</div>
+            <div class="bridge-grid" id="bridge"></div>
+            <div class="side-platform end-platform">FINISH</div>
+        </div>
+
+        <img id="player-img" src="char1.jpeg" class="character">
+    </div>
+
+    <div id="modal-overlay">
+        <div id="quiz-modal" class="quiz-modal" style="display:none">
+            <div class="quiz-question" id="question"></div>
+            <div class="quiz-options" id="options"></div>
+        </div>
+
+        <div id="game-over-modal" class="game-over-modal" style="display:none">
+            <h1 id="result-title" style="font-size: 3rem;"></h1>
+            <p id="result-msg"></p>
+            <button class="btn-start" onclick="location.reload()">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const ROWS = 2;
+        const COLS = 8;
+        let bridge = [];
+        let lifeCount = 3;
+        let currentPos = { row: 0, col: -1 };
+        let gameOver = false;
+
+        const questions = [
+            { q: "What is the capital of France?", a: ["Paris", "London", "Rome", "Berlin"], c: 0 },
+            { q: "Largest planet in our solar system?", a: ["Jupiter", "Earth", "Mars", "Saturn"], c: 0 },
+            { q: "Square root of 64?", a: ["8", "6", "7", "9"], c: 0 },
+            { q: "Chemical symbol for gold?", a: ["Au", "Ag", "Fe", "Pb"], c: 0 },
+            { q: "Who painted the Mona Lisa?", a: ["Da Vinci", "Picasso", "Van Gogh", "Michelangelo"], c: 0 },
+            { q: "How many continents?", a: ["7", "6", "5", "8"], c: 0 },
+            { q: "Hardest natural substance?", a: ["Diamond", "Gold", "Iron", "Granite"], c: 0 },
+            { q: "Capital of Australia?", a: ["Canberra", "Sydney", "Melbourne", "Perth"], c: 0 }
+        ];
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            initGame();
+        }
+
+        function initGame() {
+            const bridgeEl = document.getElementById('bridge');
+            const livesEl = document.getElementById('lives-container');
+            
+            // Generate bridge data
+            for(let r=0; r<ROWS; r++) {
+                bridge[r] = [];
+                for(let c=0; c<COLS; c++) {
+                    bridge[r][c] = Math.random() < 0.7; // 70% chance of being safe
+                }
+            }
+            // Ensure at least one safe path exists per column
+            for(let c=0; c<COLS; c++) {
+                if(!bridge[0][c] && !bridge[1][c]) bridge[Math.floor(Math.random()*2)][c] = true;
+            }
+
+            // Render blocks
+            for(let r=0; r<ROWS; r++) {
+                for(let c=0; c<COLS; c++) {
+                    const block = document.createElement('div');
+                    block.className = 'glass-block';
+                    block.dataset.row = r;
+                    block.dataset.col = c;
+                    block.id = `block-${r}-${c}`;
+                    block.onclick = () => handleMove(r, c);
+                    bridgeEl.appendChild(block);
+                }
+            }
+
+            // Render lives
+            updateLives();
+            movePlayer(-1, 0);
+        }
+
+        function updateLives() {
+            const container = document.getElementById('lives-container');
+            container.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                const img = document.createElement('img');
+                img.src = 'heart.jpeg';
+                img.className = 'heart';
+                img.style.opacity = i < lifeCount ? '1' : '0.2';
+                container.appendChild(img);
+            }
+        }
+
+        function movePlayer(col, row) {
+            const player = document.getElementById('player-img');
+            const startPlatform = document.querySelector('.start-platform');
+            
+            if (col === -1) {
+                const rect = startPlatform.getBoundingClientRect();
+                player.style.left = `${rect.left + rect.width/2 - 25}px`;
+                player.style.top = `${rect.top + rect.height/2 - 25}px`;
+            } else {
+                const block = document.getElementById(`block-${row}-${col}`);
+                const rect = block.getBoundingClientRect();
+                player.style.left = `${rect.left + rect.width/2 - 25}px`;
+                player.style.top = `${rect.top + rect.height/2 - 25}px`;
+            }
+        }
+
+        function handleMove(row, col) {
+            if (gameOver) return;
+            
+            // Check adjacency
+            if (Math.abs(currentPos.col - col) > 1 || (currentPos.col !== -1 && Math.abs(currentPos.row - row) > 1)) {
+                // Too far
+                return;
+            }
+
+            currentPos = { row, col };
+            movePlayer(col, row);
+
+            const isSafe = bridge[row][col];
+            const blockEl = document.getElementById(`block-${row}-${col}`);
+
+            setTimeout(() => {
+                if (isSafe) {
+                    blockEl.classList.add('correct');
+                    showQuiz(col);
+                } else {
+                    blockEl.classList.add('cracked');
+                    handleLifeLost();
+                }
+            }, 500);
+        }
+
+        function handleLifeLost() {
+            lifeCount--;
+            updateLives();
+            
+            if (lifeCount === 0) {
+                endGame(false, "ELIMINATED! All characters lost.");
+            } else {
+                // Change character image based on life
+                document.getElementById('player-img').src = `char${4-lifeCount}.jpeg`;
+                // Move back to start
+                currentPos = { row: 0, col: -1 };
+                setTimeout(() => movePlayer(-1, 0), 500);
+            }
+        }
+
+        function showQuiz(col) {
+            const overlay = document.getElementById('modal-overlay');
+            const modal = document.getElementById('quiz-modal');
+            const q = questions[Math.floor(Math.random() * questions.length)];
+            
+            document.getElementById('question').textContent = q.q;
+            const optionsEl = document.getElementById('options');
+            optionsEl.innerHTML = '';
+            
+            // Shuffle options
+            let opts = q.a.map((txt, i) => ({txt, i}));
+            opts.sort(() => Math.random() - 0.5);
+
+            opts.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.textContent = opt.txt;
+                btn.onclick = () => {
+                    if (opt.i === q.c) {
+                        overlay.style.display = 'none';
+                        modal.style.display = 'none';
+                        if (col === COLS - 1) endGame(true, "YOU SURVIVED THE BRIDGE!");
+                    } else {
+                        endGame(false, "WRONG ANSWER! ELIMINATED.");
+                    }
+                };
+                optionsEl.appendChild(btn);
+            });
+
+            overlay.style.display = 'flex';
+            modal.style.display = 'block';
+        }
+
+        function endGame(won, msg) {
+            gameOver = true;
+            const overlay = document.getElementById('modal-overlay');
+            const modal = document.getElementById('game-over-modal');
+            const quiz = document.getElementById('quiz-modal');
+            
+            quiz.style.display = 'none';
+            overlay.style.display = 'flex';
+            modal.style.display = 'block';
+            
+            document.getElementById('result-title').textContent = won ? "VICTORY" : "GAME OVER";
+            document.getElementById('result-title').style.color = won ? "var(--safe)" : "var(--danger)";
+            document.getElementById('result-msg').textContent = msg;
+        }
+
+        // Handle window resize for player positioning
+        window.onresize = () => movePlayer(currentPos.col, currentPos.row);
+
+    </script>
+</body>
+</html>
